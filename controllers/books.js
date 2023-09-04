@@ -1,5 +1,6 @@
 const Book = require("../models/Book");
 const fs = require("fs");
+const sharp = require("sharp");
 
 exports.createBook = (req, res, next) => {
   const bookObject = JSON.parse(req.body.book);
@@ -12,6 +13,9 @@ exports.createBook = (req, res, next) => {
       req.file.filename
     }`,
   });
+  // gestion de la conversion de l'image
+  const refImg = `${req.file.filename.split(".")[0]}.webp`;
+  sharp(req.file.path).webp({ quality: 20 }).toFile(`images/${refImg}`);
 
   book
     .save()

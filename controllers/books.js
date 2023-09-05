@@ -1,3 +1,4 @@
+const { log } = require("console");
 const Book = require("../models/Book");
 const fs = require("fs");
 const sharp = require("sharp");
@@ -96,37 +97,37 @@ exports.getAllBooks = (req, res, next) => {
 
 exports.ratingBook = (req, res, next) => {
   const userId = req.auth.userId;
-  const grade = req.body.grade;
-
-  Book.findOne({ _id: req.params.id })
+  const grade = req.body.rating;
+  Book.findById(req.params.id)
     .then((book) => {
       // Vérifier si l'utilisateur a déjà noté ce livre
       if (book.ratings.find((rating) => rating.userId === userId)) {
         res.status(401).json({ message: "Not authorized" });
-      } else {
-        book.ratings
-          .push({ userId, grade })
-          .then(() => {
-            // calcul de la nouvelle moyenne
-            const totalRatings = book.ratings.length;
-            const totalGrade = book.ratings.reduce(
-              (sum, rating) => sum + rating.grade,
-              0
-            );
-            book.averageRating = totalGrade / totalRatings;
+      }
 
-            // sauvegarde du livre
-            book
-              .save()
-              .then(() =>
-                res.status(200).json({ message: "Votre note est enregistré !" })
-              )
-              .catch((error) => res.status(400).json({ error }));
-          })
-          .catch((error) => res.status(400).json({ error }));
+      const lengthRating = book.ratings.length;
+      book.ratings.push({ userId, grade });
+
+      if (book.ratings.length === lengthRating + 1) {
+        // calcul de la nouvelle moyenne
+        const totalRatings = book.ratings.length;
+        const totalGrade = book.ratings.reduce(
+          (sum, rating) => sum + rating.grade,
+          0
+        );
+        book.averageRating = totalGrade / totalRatings;
+        // sauvegarde du livre
+        return book.save();
+      } else {
+        return Promise.reject(new Error("Echec de l'ajout de la note"));
       }
     })
+    .then(() =>
+      res.status(200).json({ message: "Votre note est enregistré !" })
+    )
     .catch((error) => {
-      res.status(500).json({ error });
+      res
+        .status(500)
+        .json({ error: "Impossible de trouver le livre dans la bdd" });
     });
 };

@@ -6,16 +6,25 @@ exports.createBook = (req, res, next) => {
   const bookObject = JSON.parse(req.body.book);
   delete bookObject._id;
   delete bookObject._userId;
+
+  // Gestion de la conversion de l'image
+  const refImg = `${req.file.filename.split(".")[0]}.webp`;
+  sharp(req.file.path)
+    .webp({ quality: 20 })
+    .toFile(`images/${refImg}`, (err) => {
+      if (err) {
+        res
+          .status(500)
+          .json({ error: "Erreur lors de la conversion de l'image" });
+      }
+    });
+
+  // Lorsque la conversion est terminée => sauvegarde avec le lien vers l'image optimisée
   const book = new Book({
     ...bookObject,
     userId: req.auth.userId,
-    imageUrl: `${req.protocol}://${req.get("host")}/images/${
-      req.file.filename
-    }`,
+    imageUrl: `${req.protocol}://${req.get("host")}/images/${refImg}`,
   });
-  // gestion de la conversion de l'image
-  const refImg = `${req.file.filename.split(".")[0]}.webp`;
-  sharp(req.file.path).webp({ quality: 20 }).toFile(`images/${refImg}`);
 
   book
     .save()
@@ -37,7 +46,7 @@ exports.modifyBook = (req, res, next) => {
   Book.findOne({ _id: req.params.id })
     .then((book) => {
       if (book.userId != req.auth.userId) {
-        res.status(401).json({ message: "Not authorized" });
+        res.status(403).json({ message: "Not authorized" });
       } else {
         Book.updateOne(
           { _id: req.params.id },
@@ -83,4 +92,41 @@ exports.getAllBooks = (req, res, next) => {
   Book.find()
     .then((book) => res.status(200).json(book))
     .catch((error) => res.status(400).json({ error }));
+};
+
+exports.ratingBook = (req, res, next) => {
+  const userId = req.auth.userId;
+  const grade = req.body.grade;
+
+  Book.findOne({ _id: req.params.id })
+    .then((book) => {
+      // Vérifier si l'utilisateur a déjà noté ce livre
+      if (book.ratings.find((rating) => rating.userId === userId)) {
+        res.status(401).json({ message: "Not authorized" });
+      } else {
+        book.ratings
+          .push({ userId, grade })
+          .then(() => {
+            // calcul de la nouvelle moyenne
+            const totalRatings = book.ratings.length;
+            const totalGrade = book.ratings.reduce(
+              (sum, rating) => sum + rating.grade,
+              0
+            );
+            book.averageRating = totalGrade / totalRatings;
+
+            // sauvegarde du livre
+            book
+              .save()
+              .then(() =>
+                res.status(200).json({ message: "Votre note est enregistré !" })
+              )
+              .catch((error) => res.status(400).json({ error }));
+          })
+          .catch((error) => res.status(400).json({ error }));
+      }
+    })
+    .catch((error) => {
+      res.status(500).json({ error });
+    });
 };

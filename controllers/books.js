@@ -4,8 +4,11 @@ const fs = require("fs");
 const sharp = require("sharp");
 
 exports.createBook = (req, res, next) => {
+  // récupérer les informations de la requête
   const bookObject = JSON.parse(req.body.book);
+  // supprimer l'Id pour en générer un nouveau par mangoDB
   delete bookObject._id;
+  // supprimer l'userId pour récupérer user_Id authentifié
   delete bookObject._userId;
 
   // Gestion de la conversion de l'image
@@ -120,13 +123,14 @@ exports.ratingBook = (req, res, next) => {
         book.averageRating = totalGrade / totalRatings;
         // sauvegarde du livre
         book.save();
+        return book;
       } else {
         return Promise.reject(new Error("Echec de l'ajout de la note"));
       }
     })
-    .then(() =>
-      res.status(200).json({ message: "Votre note a été enregistré !" })
-    )
+    .then((book) => {
+      return res.status(200).json(book);
+    })
     .catch((error) => {
       res.status(500).json({ error });
     });
@@ -137,7 +141,7 @@ exports.bestRatingBooks = (req, res, next) => {
     .sort({ averageRating: -1 }) // trier par moyenne décroissante
     .limit(3) //limiter le résultat à 3
     .then((bestBooks) => {
-      res.status(200).json({ bestBooks });
+      res.status(200).json(bestBooks);
     })
     .catch((error) => {
       res.status(500).json({ error });

@@ -34,6 +34,7 @@ exports.createBook = (req, res, next) => {
 };
 
 exports.modifyBook = (req, res, next) => {
+  //vérifier si upload nouvelle image
   const bookObject = req.file
     ? {
         ...JSON.parse(req.body.book),
@@ -68,6 +69,7 @@ exports.deleteBook = (req, res, next) => {
       if (book.userId != req.auth.userId) {
         res.status(401).json({ message: "Not authorized" });
       } else {
+        //extraire le nom du fichier
         const filename = book.imageUrl.split("/images/")[1];
         fs.unlink(`images/${filename}`, () => {
           Book.deleteOne({ _id: req.params.id })
@@ -117,17 +119,27 @@ exports.ratingBook = (req, res, next) => {
         );
         book.averageRating = totalGrade / totalRatings;
         // sauvegarde du livre
-        return book.save();
+        book.save();
       } else {
         return Promise.reject(new Error("Echec de l'ajout de la note"));
       }
     })
     .then(() =>
-      res.status(200).json({ message: "Votre note est enregistré !" })
+      res.status(200).json({ message: "Votre note a été enregistré !" })
     )
     .catch((error) => {
-      res
-        .status(500)
-        .json({ error: "Impossible de trouver le livre dans la bdd" });
+      res.status(500).json({ error });
+    });
+};
+
+exports.bestRatingBooks = (req, res, next) => {
+  Book.find()
+    .sort({ averageRating: -1 }) // trier par moyenne décroissante
+    .limit(3) //limiter le résultat à 3
+    .then((bestBooks) => {
+      res.status(200).json({ bestBooks });
+    })
+    .catch((error) => {
+      res.status(500).json({ error });
     });
 };

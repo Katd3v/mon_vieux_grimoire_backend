@@ -11,7 +11,7 @@ exports.createBook = (req, res, next) => {
   // supprimer l'userId pour récupérer user_Id authentifié
   delete bookObject._userId;
 
-  // Lorsque la conversion est terminée => sauvegarde avec le lien vers l'image optimisée
+  // création d'un nouveau livre
   const book = new Book({
     ...bookObject,
     userId: req.auth.userId,
@@ -19,7 +19,7 @@ exports.createBook = (req, res, next) => {
       req.file.filename
     }`,
   });
-
+  // sauvegarde dans le base de données
   book
     .save()
     .then(() => res.status(201).json({ message: "Objet enregistré !" }))
@@ -27,7 +27,7 @@ exports.createBook = (req, res, next) => {
 };
 
 exports.modifyBook = (req, res, next) => {
-  //vérifier si upload nouvelle image
+  //vérifier si nouvelle image
   const bookObject = req.file
     ? {
         ...JSON.parse(req.body.book),
@@ -40,6 +40,7 @@ exports.modifyBook = (req, res, next) => {
   delete bookObject._userId;
   Book.findOne({ _id: req.params.id })
     .then((book) => {
+      //vérifier si le user ID actuel correspond au user ID du livre
       if (book.userId != req.auth.userId) {
         res.status(403).json({ message: "Not authorized" });
       } else {

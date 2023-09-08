@@ -1,7 +1,7 @@
 const { log } = require("console");
 const Book = require("../models/Book");
 const fs = require("fs");
-const sharp = require("sharp");
+// const sharp = require("sharp");
 
 exports.createBook = (req, res, next) => {
   // récupérer les informations de la requête
@@ -11,23 +11,13 @@ exports.createBook = (req, res, next) => {
   // supprimer l'userId pour récupérer user_Id authentifié
   delete bookObject._userId;
 
-  // Gestion de la conversion de l'image
-  const refImg = `${req.file.filename.split(".")[0]}.webp`;
-  sharp(req.file.path)
-    .webp({ quality: 20 })
-    .toFile(`images/${refImg}`, (err) => {
-      if (err) {
-        res
-          .status(500)
-          .json({ error: "Erreur lors de la conversion de l'image" });
-      }
-    });
-
   // Lorsque la conversion est terminée => sauvegarde avec le lien vers l'image optimisée
   const book = new Book({
     ...bookObject,
     userId: req.auth.userId,
-    imageUrl: `${req.protocol}://${req.get("host")}/images/${refImg}`,
+    imageUrl: `${req.protocol}://${req.get("host")}/images/${
+      req.file.filename
+    }`,
   });
 
   book

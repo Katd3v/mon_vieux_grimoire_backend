@@ -5,7 +5,7 @@ const fs = require("fs");
 exports.createBook = (req, res, next) => {
   // récupérer les informations de la requête
   const bookObject = JSON.parse(req.body.book);
-  // supprimer l'Id pour en générer un nouveau par mangoDB
+  // supprimer l'Id pour en générer un nouveau par mongoDB
   delete bookObject._id;
   // supprimer l'userId pour récupérer user_Id authentifié
   delete bookObject._userId;
@@ -79,6 +79,7 @@ exports.deleteBook = (req, res, next) => {
 };
 
 exports.getOneBook = (req, res, next) => {
+  // Rechercher un livre en récupérant son id
   Book.findOne({ _id: req.params.id })
     .then((book) => res.status(200).json(book))
     .catch((error) => res.status(404).json({ error }));
